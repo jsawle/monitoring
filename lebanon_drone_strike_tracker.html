@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Southern Lebanon — Drone Strike Incidents</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1012;
+    --bg-2: #16181c;
+    --bg-3: #1d2025;
+    --bg-4: #24272e;
+    --border: #2a2e36;
+    --border-2: #383d47;
+    --fg: #e7e5e1;
+    --fg-2: #a8a59f;
+    --fg-3: #6e6c67;
+    --accent: #d4a04a;
+    --accent-2: #e8b75f;
+    --warn: #c25a3a;
+    --ok: #5a9a6e;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: var(--serif); font-size: 15px; line-height: 1.5; }
+  body { overflow: hidden; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .app { display: grid; grid-template-columns: 360px 1fr; grid-template-rows: auto 1fr; height: 100vh; }
+
+  header.bar {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-2);
+    padding: 14px 22px 12px;
+    display: flex; align-items: baseline; gap: 16px;
+    flex-wrap: wrap;
+  }
+  header.bar .crest {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--fg-3);
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border: 1px solid var(--border-2);
+    border-radius: 2px;
+  }
+  header.bar h1 {
+    margin: 0;
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 19px;
+    letter-spacing: -0.005em;
+  }
+  header.bar h1 em { font-style: italic; color: var(--fg-2); font-weight: 400; }
+  header.bar .meta {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--fg-3);
+    letter-spacing: 0.05em;
+  }
+  header.bar .meta b { color: var(--fg-2); font-weight: 500; }
+  header.bar .topbtns { display: flex; gap: 8px; }
+  header.bar .topbtns button {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: var(--bg-3); border: 1px solid var(--border-2);
+    color: var(--fg); padding: 5px 10px;
+    cursor: pointer; border-radius: 2px;
+    transition: all 0.15s;
+  }
+  header.bar .topbtns button:hover { border-color: var(--accent); color: var(--accent); }
+  header.bar .topbtns button.primary {
+    background: var(--accent); color: #1a1207; border-color: var(--accent);
+  }
+  header.bar .topbtns button.primary:hover { background: var(--accent-2); color: #1a1207; }
+
+  aside {
+    background: var(--bg-2);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .controls { padding: 14px 18px 12px; border-bottom: 1px solid var(--border); }
+  .controls h2 {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--fg-3);
+    margin: 0 0 8px; font-weight: 500;
+  }
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--fg-3);
+    margin-bottom: 5px;
+  }
+  .search {
+    width: 100%;
+    background: var(--bg-3); border: 1px solid var(--border);
+    color: var(--fg); padding: 7px 10px;
+    font-family: var(--mono); font-size: 12px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search:focus { border-color: var(--accent); }
+  .daterange { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .daterange input {
+    background: var(--bg-3); border: 1px solid var(--border);
+    color: var(--fg); padding: 6px 8px;
+    font-family: var(--mono); font-size: 11px;
+    border-radius: 2px;
+    color-scheme: dark;
+    outline: none;
+    width: 100%;
+  }
+  .daterange input:focus { border-color: var(--accent); }
+
+  .legend { padding: 12px 18px 14px; border-bottom: 1px solid var(--border); }
+  .legend h2 {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--fg-3);
+    margin: 0 0 8px; font-weight: 500;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .legend-actions { display: flex; gap: 8px; }
+  .legend-actions button {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent; border: 1px solid var(--border-2);
+    color: var(--fg-2); padding: 2px 6px;
+    cursor: pointer; border-radius: 2px;
+  }
+  .legend-actions button:hover { color: var(--fg); border-color: var(--fg-3); }
+  .legend ul { margin: 0; padding: 0; list-style: none; }
+  .legend li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 0;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.15s;
+  }
+  .legend li.off { opacity: 0.35; }
+  .legend li .swatch {
+    width: 11px; height: 11px; border-radius: 50%;
+    border: 1.5px solid #fff2;
+    flex-shrink: 0;
+  }
+  .legend li.off .swatch { background: transparent !important; }
+  .legend li .name { font-family: var(--serif); font-size: 13.5px; flex: 1; color: var(--fg); }
+  .legend li .count { font-family: var(--mono); font-size: 10.5px; color: var(--fg-3); }
+
+  .list-wrap { flex: 1; min-height: 0; overflow-y: auto; }
+  .list-header {
+    padding: 11px 18px 8px;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--fg-3);
+    display: flex; justify-content: space-between; align-items: baseline;
+    background: var(--bg-2);
+    position: sticky; top: 0; z-index: 2;
+    border-bottom: 1px solid var(--border);
+  }
+  .list-header b { color: var(--fg-2); font-weight: 500; }
+
+  .incident {
+    padding: 11px 18px 12px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background-color 0.12s;
+    position: relative;
+  }
+  .incident:hover { background: var(--bg-3); }
+  .incident.active { background: var(--bg-3); box-shadow: inset 3px 0 0 var(--accent); }
+  .incident.user-added::after {
+    content: "Added";
+    position: absolute;
+    top: 11px; right: 18px;
+    font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ok);
+    padding: 1px 5px;
+    border: 1px solid var(--ok);
+    border-radius: 2px;
+    opacity: 0.7;
+  }
+  .incident .row1 { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; padding-right: 56px; }
+  .incident .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; transform: translateY(-1px); }
+  .incident .asset {
+    font-family: var(--serif); font-size: 14.5px;
+    flex: 1; color: var(--fg); font-weight: 500;
+  }
+  .incident .date {
+    font-family: var(--mono); font-size: 10px; color: var(--fg-3);
+    letter-spacing: 0.04em; white-space: nowrap;
+  }
+  .incident .row2 {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--fg-3); letter-spacing: 0.04em;
+  }
+  .incident .row2 .cat { color: var(--fg-2); }
+  .incident .row2 .sep { color: var(--border-2); margin: 0 6px; }
+
+  main { position: relative; min-height: 0; min-width: 0; }
+  #map { position: absolute; inset: 0; background: var(--bg); }
+
+  /* Leaflet dark theme overrides */
+  .leaflet-container { background: #0a0b0d; font-family: var(--mono); }
+  .leaflet-popup-content-wrapper {
+    background: var(--bg-2); color: var(--fg);
+    border: 1px solid var(--border-2);
+    border-radius: 3px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .leaflet-popup-tip { background: var(--bg-2); border: 1px solid var(--border-2); }
+  .leaflet-popup-content { margin: 12px 14px; font-family: var(--serif); font-size: 13px; line-height: 1.45; }
+  .popup .pop-cat {
+    display: inline-block;
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 2px;
+    margin-bottom: 6px;
+  }
+  .popup .pop-asset { font-weight: 500; font-size: 15px; margin-bottom: 4px; color: var(--fg); }
+  .popup .pop-date { font-family: var(--mono); font-size: 10.5px; color: var(--fg-3); letter-spacing: 0.04em; margin-bottom: 8px; }
+  .popup .pop-coords { font-family: var(--mono); font-size: 10px; color: var(--fg-3); margin-bottom: 8px; }
+  .popup .pop-src a { font-family: var(--mono); font-size: 10.5px; word-break: break-all; }
+  .popup .pop-added {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ok); margin-top: 8px;
+  }
+  .leaflet-control-zoom a {
+    background: var(--bg-2); color: var(--fg) !important;
+    border-color: var(--border) !important;
+  }
+  .leaflet-control-zoom a:hover { background: var(--bg-3); }
+  .leaflet-control-attribution {
+    background: rgba(15,16,18,0.85) !important;
+    color: var(--fg-3) !important;
+    font-family: var(--mono); font-size: 9.5px;
+  }
+  .leaflet-control-attribution a { color: var(--fg-2) !important; }
+
+  /* Custom marker */
+  .marker-dot {
+    border-radius: 50%;
+    border: 2px solid #f5f3ef;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    transition: transform 0.15s;
+  }
+  .marker-dot.active { transform: scale(1.5); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(212,160,74,0.25), 0 2px 8px rgba(0,0,0,0.8); }
+  .marker-dot.user-added {
+    border-style: dashed;
+    border-color: var(--ok);
+    border-width: 2.5px;
+  }
+  .map-crosshair {
+    position: absolute; top: 50%; left: 50%;
+    width: 30px; height: 30px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 999;
+    display: none;
+  }
+  .map-crosshair.on { display: block; }
+  .map-crosshair::before, .map-crosshair::after {
+    content: ''; position: absolute;
+    background: var(--accent);
+  }
+  .map-crosshair::before { left: 50%; top: 0; width: 1.5px; height: 100%; transform: translateX(-50%); }
+  .map-crosshair::after { top: 50%; left: 0; height: 1.5px; width: 100%; transform: translateY(-50%); }
+
+  .pick-banner {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: #1a1207;
+    padding: 8px 16px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    z-index: 1001;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    display: none;
+    align-items: center; gap: 12px;
+  }
+  .pick-banner.on { display: flex; }
+  .pick-banner button {
+    background: rgba(0,0,0,0.2); border: 1px solid rgba(0,0,0,0.3);
+    color: #1a1207; padding: 3px 8px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer; border-radius: 2px;
+  }
+  .pick-banner button:hover { background: rgba(0,0,0,0.3); }
+
+  .footer-strip {
+    position: absolute; bottom: 12px; left: 12px; z-index: 1000;
+    background: rgba(15,16,18,0.92);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    font-family: var(--mono); font-size: 10px; color: var(--fg-3);
+    letter-spacing: 0.04em;
+    max-width: 380px;
+    line-height: 1.5;
+  }
+  .footer-strip b { color: var(--fg-2); font-weight: 500; }
+  .footer-strip .actions { margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .footer-strip .actions button {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent; border: 1px solid var(--border-2);
+    color: var(--fg-2); padding: 3px 7px;
+    cursor: pointer; border-radius: 2px;
+  }
+  .footer-strip .actions button:hover { color: var(--fg); border-color: var(--fg-3); }
+
+  /* Modal */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(8,9,11,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .modal-bg.on { display: flex; }
+  .modal {
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    border-radius: 4px;
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  }
+  .modal-header {
+    padding: 16px 22px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .modal-header h2 {
+    margin: 0;
+    font-family: var(--serif); font-size: 18px; font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+  .modal-header h2 em { color: var(--fg-2); font-style: italic; font-weight: 400; }
+  .modal-header .close {
+    background: transparent; border: none;
+    color: var(--fg-3); cursor: pointer;
+    font-family: var(--mono); font-size: 18px;
+    padding: 0 4px;
+  }
+  .modal-header .close:hover { color: var(--fg); }
+  .modal-body { padding: 18px 22px 20px; }
+  .modal-body .row { margin-bottom: 14px; }
+  .modal-body .row:last-child { margin-bottom: 0; }
+  .modal-body label {
+    display: block;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--fg-3);
+    margin-bottom: 5px;
+  }
+  .modal-body input[type=text],
+  .modal-body input[type=number],
+  .modal-body input[type=date],
+  .modal-body input[type=url],
+  .modal-body select,
+  .modal-body textarea {
+    width: 100%;
+    background: var(--bg-3); border: 1px solid var(--border);
+    color: var(--fg); padding: 8px 10px;
+    font-family: var(--mono); font-size: 12px;
+    border-radius: 2px; outline: none;
+    color-scheme: dark;
+  }
+  .modal-body input:focus, .modal-body select:focus, .modal-body textarea:focus {
+    border-color: var(--accent);
+  }
+  .modal-body textarea { resize: vertical; min-height: 60px; font-family: var(--mono); }
+  .modal-body .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-body .help { font-family: var(--serif); font-size: 12.5px; color: var(--fg-2); line-height: 1.5; font-style: italic; }
+  .modal-body .pick-coords {
+    margin-top: 6px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+    color: var(--fg-3);
+  }
+  .modal-body .pick-coords button {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent; border: 1px solid var(--border-2);
+    color: var(--accent); padding: 3px 7px;
+    cursor: pointer; border-radius: 2px;
+    margin-left: 6px;
+  }
+  .modal-body .pick-coords button:hover { border-color: var(--accent); }
+  .modal-footer {
+    padding: 12px 22px 16px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; gap: 10px;
+    align-items: center;
+  }
+  .modal-footer .err {
+    font-family: var(--mono); font-size: 10.5px; color: var(--warn);
+    flex: 1;
+  }
+  .modal-footer .ok { color: var(--ok); }
+  .modal-footer .btns { display: flex; gap: 8px; }
+  .modal-footer button {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: 1px solid var(--border-2);
+    background: var(--bg-3); color: var(--fg);
+    padding: 7px 14px;
+    cursor: pointer; border-radius: 2px;
+  }
+  .modal-footer button:hover { border-color: var(--fg-3); }
+  .modal-footer button.primary {
+    background: var(--accent); color: #1a1207; border-color: var(--accent);
+  }
+  .modal-footer button.primary:hover { background: var(--accent-2); }
+  .modal-footer button:disabled {
+    opacity: 0.4; cursor: not-allowed;
+  }
+
+  .snapshot-list { margin-top: 6px; }
+  .snapshot-item {
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px;
+  }
+  .snapshot-item:hover { border-color: var(--border-2); }
+  .snapshot-item .meta { flex: 1; min-width: 0; }
+  .snapshot-item .title {
+    font-family: var(--serif); font-size: 14px; color: var(--fg);
+    font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .snapshot-item .sub {
+    font-family: var(--mono); font-size: 10px; color: var(--fg-3);
+    letter-spacing: 0.04em;
+    margin-top: 3px;
+  }
+  .snapshot-item .id { color: var(--accent); }
+  .snapshot-item .actions { display: flex; gap: 6px; }
+  .snapshot-item button {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent; border: 1px solid var(--border-2);
+    color: var(--fg-2); padding: 4px 8px;
+    cursor: pointer; border-radius: 2px;
+  }
+  .snapshot-item button:hover { color: var(--fg); border-color: var(--fg-3); }
+  .snapshot-empty {
+    font-family: var(--serif); font-style: italic; font-size: 13px;
+    color: var(--fg-3); text-align: center; padding: 20px;
+  }
+
+  .viewing-banner {
+    background: var(--accent);
+    color: #1a1207;
+    padding: 6px 22px;
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em;
+    text-transform: uppercase;
+    display: none;
+    align-items: center; justify-content: space-between;
+    grid-column: 1 / -1;
+  }
+  .viewing-banner.on { display: flex; }
+  .viewing-banner button {
+    background: rgba(0,0,0,0.2); border: 1px solid rgba(0,0,0,0.3);
+    color: #1a1207; padding: 3px 10px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer; border-radius: 2px;
+  }
+  .viewing-banner button:hover { background: rgba(0,0,0,0.3); }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-2); }
+  ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--fg-3); }
+
+  @media (max-width: 800px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto auto 40vh 1fr; }
+    aside { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <span class="crest">OSINT · v2</span>
+    <h1>Southern Lebanon <em>— drone strike incidents</em></h1>
+    <div class="meta">
+      <span><b id="stat-total">0</b> incidents</span>
+      &nbsp;·&nbsp;
+      <span id="stat-range">—</span>
+      &nbsp;·&nbsp;
+      <span><b id="stat-visible">0</b> visible</span>
+    </div>
+    <div class="topbtns">
+      <button id="open-add" title="Add a new incident">＋ Add incident</button>
+      <button id="open-publish" class="primary" title="Publish current map as a snapshot">↗ Publish</button>
+      <button id="open-snapshots" title="View published snapshots">⌘ Snapshots</button>
+    </div>
+  </header>
+
+  <div class="viewing-banner" id="viewing-banner">
+    <span>Viewing snapshot: <b id="viewing-name">—</b> · <span id="viewing-id">—</span></span>
+    <button id="exit-snapshot">Exit snapshot view</button>
+  </div>
+
+  <aside>
+    <div class="controls">
+      <h2>Filters</h2>
+      <div class="field">
+        <label for="search">Search</label>
+        <input id="search" class="search" type="text" placeholder="e.g. Humvee, Merkava, Iron Dome">
+      </div>
+      <div class="field">
+        <label>Date range</label>
+        <div class="daterange">
+          <input id="date-from" type="date">
+          <input id="date-to" type="date">
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <h2>
+        Target type
+        <span class="legend-actions">
+          <button id="legend-all">All</button>
+          <button id="legend-none">None</button>
+        </span>
+      </h2>
+      <ul id="legend"></ul>
+    </div>
+    <div class="list-wrap">
+      <div class="list-header">
+        <span>Incidents <b id="list-count">0</b></span>
+        <span>Most recent first</span>
+      </div>
+      <div id="list"></div>
+    </div>
+  </aside>
+
+  <main>
+    <div id="map"></div>
+    <div class="map-crosshair" id="crosshair"></div>
+    <div class="pick-banner" id="pick-banner">
+      <span>Click map to set coordinates</span>
+      <button id="cancel-pick">Cancel</button>
+    </div>
+    <div class="footer-strip">
+      <div><b>Data:</b> 62 base placemarks from public Google My Maps export, plus shared user-added incidents. Source media linked per incident.</div>
+      <div style="margin-top:4px;"><b>Note:</b> Original placemark dates lack year. Inferred as 2026 from context; treat as provisional.</div>
+      <div class="actions">
+        <button id="export-csv">Export CSV</button>
+        <button id="export-geojson">Export GeoJSON</button>
+        <button id="reset-view">Reset view</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Add Incident Modal -->
+<div class="modal-bg" id="add-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Add incident <em>— shared with all viewers</em></h2>
+      <button class="close" data-close="add-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="help">Adds an incident to the shared dataset. Visible to anyone using this artifact. There's no edit history — be careful with what you submit.</p>
+      <div class="row">
+        <label>Asset / what was hit</label>
+        <input id="f-asset" type="text" placeholder="e.g. Humvee, Merkava Tank, Personnel">
+      </div>
+      <div class="row">
+        <label>Category</label>
+        <select id="f-category"></select>
+      </div>
+      <div class="row">
+        <label>Coordinates (latitude, longitude)</label>
+        <div class="grid2">
+          <input id="f-lat" type="number" step="any" placeholder="33.1632">
+          <input id="f-lng" type="number" step="any" placeholder="35.1801">
+        </div>
+        <div class="pick-coords">
+          Or pick from map:
+          <button id="f-pick">Click map to set</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Date (optional)</label>
+        <input id="f-date" type="date">
+      </div>
+      <div class="row">
+        <label>Source URL (optional, recommended)</label>
+        <input id="f-source" type="url" placeholder="https://...">
+      </div>
+      <div class="row">
+        <label>Submitted by (optional initials/handle)</label>
+        <input id="f-author" type="text" placeholder="e.g. jas">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span class="err" id="add-err"></span>
+      <div class="btns">
+        <button data-close="add-modal">Cancel</button>
+        <button id="f-submit" class="primary">Add incident</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Publish Modal -->
+<div class="modal-bg" id="publish-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Publish map <em>— shared snapshot</em></h2>
+      <button class="close" data-close="publish-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="help">Saves an immutable snapshot of the current data (base + all additions) under a short ID. Anyone using this artifact can open the snapshot via the Snapshots panel. The snapshot is shared with all viewers of this artifact.</p>
+      <p class="help" style="color: var(--warn); font-style: normal; font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em;">Note: this creates a snapshot inside the artifact — not a separate URL on the public web. To host at a separate URL, use the "Download standalone HTML" button below and upload the file to your hosting of choice (GitHub Pages, Netlify, etc).</p>
+      <div class="row">
+        <label>Snapshot title</label>
+        <input id="pub-title" type="text" placeholder="e.g. Lebanon strikes through May 19, 2026">
+      </div>
+      <div class="row">
+        <label>Author / publisher (optional)</label>
+        <input id="pub-author" type="text" placeholder="e.g. J. Sawle / OSINT desk">
+      </div>
+      <div class="row">
+        <label>Notes (optional)</label>
+        <textarea id="pub-notes" placeholder="Methodology, scope, caveats..."></textarea>
+      </div>
+      <div class="row">
+        <label>Will include</label>
+        <p class="help" style="font-style: normal; font-family: var(--mono); font-size: 11px; line-height: 1.7;" id="pub-summary">—</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span class="err" id="pub-err"></span>
+      <div class="btns">
+        <button id="pub-download">Download standalone HTML</button>
+        <button data-close="publish-modal">Cancel</button>
+        <button id="pub-submit" class="primary">Publish snapshot</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Snapshots Modal -->
+<div class="modal-bg" id="snapshots-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Published snapshots</h2>
+      <button class="close" data-close="snapshots-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="help">All snapshots published from this artifact. Click "Open" to view; "Copy ID" to share the snapshot ID with someone else using this artifact.</p>
+      <div class="snapshot-list" id="snapshot-list"></div>
+    </div>
+    <div class="modal-footer">
+      <span class="err" id="snap-msg"></span>
+      <div class="btns">
+        <button data-close="snapshots-modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+'use strict';
+
+// ----- Base data -----
+const BASE_INCIDENTS = /*BEGIN_BASE*/[{"category":"Iron Dome Systems","asset":"Iron Dome Missile Launcher (Decoy?)","date_display":"May 19 (~2026)","date_iso":"2026-05-19","year_inferred":true,"sources":["https://x.com/jonelmer/status/2057174062162493523"],"lat":33.091006,"lng":35.133796,"color":"#0288d1"},{"category":"Iron Dome Systems","asset":"Iron Dome Missile Launcher","date_display":"May 18 (~2026)","date_iso":"2026-05-18","year_inferred":true,"sources":["https://x.com/jonelmer/status/2057600925531828723"],"lat":33.082855,"lng":35.261902,"color":"#0288d1"},{"category":"Light Vehicles","asset":"Humvee","date_display":"May 17 (~2026)","date_iso":"2026-05-17","year_inferred":true,"sources":["https://x.com/DropSiteNews/status/2057449334094856635"],"lat":33.159961,"lng":35.18235,"color":"#f9a825"},{"category":"Miscellaneous/Special Targets","asset":"Israeli Flag","date_display":"May 17 (~2026)","date_iso":"2026-05-17","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056819709065023741"],"lat":33.163589,"lng":35.179514,"color":"#bdbdbd"},{"category":"Buildings/Structures","asset":"Bunker","date_display":"May 17 (~2026)","date_iso":"2026-05-17","year_inferred":true,"sources":["https://x.com/AMK_Mapping_/status/2057304691877568552/video/1"],"lat":33.1563325,"lng":35.1657025,"color":"#880e4f"},{"category":"Light Vehicles","asset":"Humvee","date_display":"May 16 (~2026)","date_iso":"2026-05-16","year_inferred":true,"sources":["https://x.com/AMK_Mapping_/status/2057304691877568552/video/2"],"lat":33.156308,"lng":35.165686,"color":"#f9a825"},{"category":"Excavator/Bulldozer","asset":"Excavator/Bulldozer","date_display":"May 16 (~2026)","date_iso":"2026-05-16","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056487491235115245"],"lat":33.311961,"lng":35.482422,"color":"#ffea00"},{"category":"Merkava Tank","asset":"Merkava Tank","date_display":"May 16 (~2026)","date_iso":"2026-05-16","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056787467672695184"],"lat":33.158073,"lng":35.178571,"color":"#9c27b0"},{"category":"Light Vehicles","asset":"M113 APC","date_display":"May 15 (~2026)","date_iso":"2026-05-15","year_inferred":true,"sources":["https://x.com/GlobeWarReport/status/2056091471292649524"],"lat":33.294982,"lng":35.474786,"color":"#f9a825"},{"category":"Light Vehicles","asset":"Humvee","date_display":"May 14 (~2026)","date_iso":"2026-05-14","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056474907995672894"],"lat":33.126732,"lng":35.200871,"color":"#f9a825"},{"category":"Personnel","asset":"Personnel","date_display":"May 14 (~2026)","date_iso":"2026-05-14","year_inferred":true,"sources":["https://x.com/ME_Observer_/status/2056012229716136188"],"lat":33.092994,"lng":35.106131,"color":"#097138"},{"category":"Namer IFV","asset":"Namer IFV","date_display":"May 14 (~2026)","date_iso":"2026-05-14","year_inferred":true,"sources":["https://x.com/EyesLebanon/status/2056338304610541699"],"lat":33.142176,"lng":35.362357,"color":"#673ab7"},{"category":"Communication/Surveillance Equipment","asset":"Communications Equipment","date_display":"May 14 (~2026)","date_iso":"2026-05-14","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056145019212386811"],"lat":33.114739,"lng":35.289817,"color":"#000000"},{"category":"Light Vehicles","asset":"M113 APC","date_display":"May 13 (~2026)","date_iso":"2026-05-13","year_inferred":true,"sources":["https://x.com/jonelmer/status/2055852053981720640"],"lat":33.124983,"lng":35.435358,"color":"#f9a825"},{"category":"Light Vehicles","asset":"Humvee","date_display":"May 12 (~2026)","date_iso":"2026-05-12","year_inferred":true,"sources":["https://x.com/jonelmer/status/2055845510783926550"],"lat":33.156311,"lng":35.165681,"color":"#f9a825"},{"category":"Light Vehicles","asset":"Pickup","date_display":"May 12 (~2026)","date_iso":"2026-05-12","year_inferred":true,"sources":["https://x.com/jonelmer/status/2055051896801354121"],"lat":33.209125,"lng":35.538144,"color":"#f9a825"},{"category":"Excavator/Bulldozer","asset":"Excavator/Bulldozer","date_display":"May 12 (~2026)","date_iso":"2026-05-12","year_inferred":true,"sources":["https://x.com/jonelmer/status/2055377864564854800"],"lat":33.124702,"lng":35.214809,"color":"#ffea00"},{"category":"Personnel","asset":"Personnel","date_display":"May 12 (~2026)","date_iso":"2026-05-12","year_inferred":true,"sources":["https://x.com/jonelmer/status/2054634179791307112"],"lat":33.208131,"lng":35.538889,"color":"#097138"},{"category":"Personnel","asset":"Personnel","date_display":"May 12 (~2026)","date_iso":"2026-05-12","year_inferred":true,"sources":["https://x.com/jonelmer/status/2054323985198744022"],"lat":33.286081,"lng":35.5272885,"color":"#097138"},{"category":"Merkava Tank","asset":"Merkava Tank","date_display":"May 12 (~2026)","date_iso":"2026-05-12","year_inferred":true,"sources":["https://x.com/jonelmer/status/2054638686734528596"],"lat":33.208375,"lng":35.538589,"color":"#9c27b0"},{"category":"Merkava Tank","asset":"Merkava Tank","date_display":"May 12 (~2026)","date_iso":"2026-05-12","year_inferred":true,"sources":["https://x.com/jonelmer/status/2055051896801354121"],"lat":33.209286,"lng":35.537472,"color":"#9c27b0"},{"category":"Miscellaneous/Special Targets","asset":"HEMTT Truck","date_display":"May 12 (~2026)","date_iso":"2026-05-12","year_inferred":true,"sources":["https://x.com/jonelmer/status/2055051896801354121"],"lat":33.2092,"lng":35.537142,"color":"#bdbdbd"},{"category":"Miscellaneous/Special Targets","asset":"HEMTT Truck","date_display":"May 12 (~2026)","date_iso":"2026-05-12","year_inferred":true,"sources":["https://x.com/jonelmer/status/2055051896801354121"],"lat":33.209019,"lng":35.537194,"color":"#bdbdbd"},{"category":"Namer IFV","asset":"Namer IFV","date_display":"May 12 (~2026)","date_iso":"2026-05-12","year_inferred":true,"sources":["https://x.com/MayadeenEnglish/status/2057807793017540789"],"lat":33.211489,"lng":35.528278,"color":"#673ab7"},{"category":"Light Vehicles","asset":"Humvee","date_display":"May 11 (~2026)","date_iso":"2026-05-11","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056505374895698279"],"lat":33.125936,"lng":35.215275,"color":"#f9a825"},{"category":"Excavator/Bulldozer","asset":"Excavator/Bulldozer","date_display":"May 11 (~2026)","date_iso":"2026-05-11","year_inferred":true,"sources":["https://x.com/jonelmer/status/2054670266983440471"],"lat":33.163781,"lng":35.173269,"color":"#ffea00"},{"category":"Excavator/Bulldozer","asset":"Excavator/Bulldozer","date_display":"May 11 (~2026)","date_iso":"2026-05-11","year_inferred":true,"sources":["https://x.com/jonelmer/status/2055414671939686695"],"lat":33.158536,"lng":35.178567,"color":"#ffea00"},{"category":"Merkava Tank","asset":"Merkava Tank","date_display":"May 11 (~2026)","date_iso":"2026-05-11","year_inferred":true,"sources":["https://x.com/jonelmer/status/2054024141934678371"],"lat":33.161056,"lng":35.181369,"color":"#9c27b0"},{"category":"Miscellaneous/Special Targets","asset":"Fuel Tanker","date_display":"May 11 (~2026)","date_iso":"2026-05-11","year_inferred":true,"sources":["https://x.com/jonelmer/status/2054703989078253714"],"lat":33.125658,"lng":35.214506,"color":"#bdbdbd"},{"category":"Buildings/Structures","asset":"Buildings/Structures","date_display":"May 10 (~2026)","date_iso":"2026-05-10","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056505374895698279"],"lat":33.126008,"lng":35.215997,"color":"#880e4f"},{"category":"Buildings/Structures","asset":"Buildings/Structures","date_display":"May 10 (~2026)","date_iso":"2026-05-10","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056822210623357000"],"lat":33.163375,"lng":35.179988,"color":"#880e4f"},{"category":"Excavator/Bulldozer","asset":"Excavator/Bulldozer","date_display":"May 9 (~2026)","date_iso":"2026-05-09","year_inferred":true,"sources":["https://x.com/jonelmer/status/2055834437905158537"],"lat":33.294947,"lng":35.474964,"color":"#ffea00"},{"category":"Personnel","asset":"Personnel","date_display":"May 9 (~2026)","date_iso":"2026-05-09","year_inferred":true,"sources":["https://x.com/jonelmer/status/2055099680053190884"],"lat":33.283667,"lng":35.495653,"color":"#097138"},{"category":"Personnel","asset":"Personnel","date_display":"May 9 (~2026)","date_iso":"2026-05-09","year_inferred":true,"sources":["https://x.com/jonelmer/status/2053563627026670034"],"lat":33.091253,"lng":35.140233,"color":"#097138"},{"category":"Light Vehicles","asset":"Humvee","date_display":"May 8 (~2026)","date_iso":"2026-05-08","year_inferred":true,"sources":["https://x.com/jonelmer/status/2054338077942759458"],"lat":33.163522,"lng":35.182994,"color":"#f9a825"},{"category":"Light Vehicles","asset":"Humvee","date_display":"May 8 (~2026)","date_iso":"2026-05-08","year_inferred":true,"sources":["https://x.com/jonelmer/status/2054224880506183784"],"lat":33.160942,"lng":35.181819,"color":"#f9a825"},{"category":"Personnel","asset":"Personnel","date_display":"May 8 (~2026)","date_iso":"2026-05-08","year_inferred":true,"sources":["https://x.com/clashreport/status/2053462942532657166"],"lat":33.091037,"lng":35.13373,"color":"#097138"},{"category":"Merkava Tank","asset":"Merkava Tank","date_display":"May 8 (~2026)","date_iso":"2026-05-08","year_inferred":true,"sources":["https://x.com/jonelmer/status/2054228552938082458"],"lat":33.160614,"lng":35.181372,"color":"#9c27b0"},{"category":"Merkava Tank","asset":"Merkava Tank","date_display":"May 8 (~2026)","date_iso":"2026-05-08","year_inferred":true,"sources":["https://x.com/jonelmer/status/2053993688825544908"],"lat":33.160722,"lng":35.181944,"color":"#9c27b0"},{"category":"Iron Dome Systems","asset":"Iron Dome Missile Launcher (Decoy?)","date_display":"May 7 (~2026)","date_iso":"2026-05-07","year_inferred":true,"sources":["https://x.com/jonelmer/status/2057617800923914717"],"lat":33.091019,"lng":35.133669,"color":"#0288d1"},{"category":"Light Vehicles","asset":"Humvee","date_display":"May 6 (~2026)","date_iso":"2026-05-06","year_inferred":true,"sources":["https://x.com/jonelmer/status/2055396804196503842"],"lat":33.274678,"lng":35.523117,"color":"#f9a825"},{"category":"Excavator/Bulldozer","asset":"Excavator/Bulldozer","date_display":"May 6 (~2026)","date_iso":"2026-05-06","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056804580269383803"],"lat":33.207375,"lng":35.509181,"color":"#ffea00"},{"category":"Personnel","asset":"Personnel","date_display":"May 6 (~2026)","date_iso":"2026-05-06","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056822210623357000"],"lat":33.1631,"lng":35.180031,"color":"#097138"},{"category":"Namer IFV","asset":"Namer IFV","date_display":"May 6 (~2026)","date_iso":"2026-05-06","year_inferred":true,"sources":["https://x.com/StrategicLensHQ/status/2055730918439207248"],"lat":33.126897,"lng":35.434194,"color":"#673ab7"},{"category":"Communication/Surveillance Equipment","asset":"Communication Equipment (Drone Dropped Bomb)","date_display":"May 6 (~2026)","date_iso":"2026-05-06","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056822210623357000"],"lat":33.163683,"lng":35.180858,"color":"#000000"},{"category":"Light Vehicles","asset":"Van","date_display":"May 4 (~2026)","date_iso":"2026-05-04","year_inferred":true,"sources":["https://x.com/MayadeenEnglish/status/2054914357226598816"],"lat":33.207978,"lng":35.539512,"color":"#f9a825"},{"category":"Miscellaneous/Special Targets","asset":"Ofek Command and Control Vehicle","date_display":"May 3 (~2026)","date_iso":"2026-05-03","year_inferred":true,"sources":["https://x.com/jonelmer/status/2053989109656436815"],"lat":33.160417,"lng":35.181906,"color":"#bdbdbd"},{"category":"Communication/Surveillance Equipment","asset":"Surveillance Equipment","date_display":"May 3 (~2026)","date_iso":"2026-05-03","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056822210623357000"],"lat":33.163383,"lng":35.180017,"color":"#000000"},{"category":"Communication/Surveillance Equipment","asset":"Communications Equipment","date_display":"May 2 (~2026)","date_iso":"2026-05-02","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056822210623357000"],"lat":33.163311,"lng":35.180128,"color":"#000000"},{"category":"Personnel","asset":"Personnel","date_display":"May 1 (~2026)","date_iso":"2026-05-01","year_inferred":true,"sources":["https://x.com/jonelmer/status/2051694816711303641"],"lat":33.16265,"lng":35.179164,"color":"#097138"},{"category":"Light Vehicles","asset":"Humvee","date_display":"Apr 29 (~2026)","date_iso":"2026-04-29","year_inferred":true,"sources":["https://x.com/jonelmer/status/2056822210623357000"],"lat":33.163053,"lng":35.180047,"color":"#f9a825"},{"category":"Merkava Tank","asset":"Merkava Tank","date_display":"Apr 28 (~2026)","date_iso":"2026-04-28","year_inferred":true,"sources":["https://x.com/jonelmer/status/2051009705074417968"],"lat":33.270565,"lng":35.468318,"color":"#9c27b0"},{"category":"Merkava Tank","asset":"Merkava Tank","date_display":"Apr 27 (~2026)","date_iso":"2026-04-27","year_inferred":true,"sources":["https://x.com/InfoSudLiban/status/2050265551155470829"],"lat":33.27158,"lng":35.454963,"color":"#9c27b0"},{"category":"Miscellaneous/Special Targets","asset":"Blackhawk Helicopter","date_display":"Apr 26 (~2026)","date_iso":"2026-04-26","year_inferred":true,"sources":["https://x.com/Archer83Able/status/2048785932183069132"],"lat":33.275244,"lng":35.521731,"color":"#bdbdbd"},{"category":"Namer IFV","asset":"Namer IFV","date_display":"Mar 31 (~2026)","date_iso":"2026-03-31","year_inferred":true,"sources":["https://x.com/samerkassisT55/status/2041765292699685288"],"lat":33.133024,"lng":35.448915,"color":"#673ab7"},{"category":"Light Vehicles","asset":"Humvee","date_display":"Mar 28 (~2026)","date_iso":"2026-03-28","year_inferred":true,"sources":["https://x.com/AJArabic/status/2039029335445614768"],"lat":33.163244,"lng":35.180299,"color":"#f9a825"},{"category":"Namer IFV","asset":"Namer IFV","date_display":"Mar 28 (~2026)","date_iso":"2026-03-28","year_inferred":true,"sources":["https://x.com/AJArabic/status/2039029335445614768"],"lat":33.162792,"lng":35.180487,"color":"#673ab7"},{"category":"Namer IFV","asset":"Namer IFV","date_display":"Mar 28 (~2026)","date_iso":"2026-03-28","year_inferred":true,"sources":["https://x.com/AJArabic/status/2039029335445614768"],"lat":33.162818,"lng":35.1799,"color":"#673ab7"},{"category":"Buildings/Structures","asset":"Buildings/Structures","date_display":"Mar 28 (~2026)","date_iso":"2026-03-28","year_inferred":true,"sources":["https://x.com/jonelmer/status/2041291564643647899"],"lat":33.118717,"lng":35.357389,"color":"#880e4f"},{"category":"Excavator/Bulldozer","asset":"Excavator/Bulldozer","date_display":"Mar 24 (~2026)","date_iso":"2026-03-24","year_inferred":true,"sources":["https://x.com/prestonstew_/status/2040409065151447177"],"lat":33.320344,"lng":35.607873,"color":"#ffea00"},{"category":"Namer IFV","asset":"Namer IFV","date_display":"Mar 24 (~2026)","date_iso":"2026-03-24","year_inferred":true,"sources":["https://x.com/prestonstew_/status/2040409065151447177"],"lat":33.264339,"lng":35.520358,"color":"#673ab7"},{"category":"Merkava Tank","asset":"Merkava Tank","date_display":null,"date_iso":null,"year_inferred":false,"sources":["https://x.com/InfoSudLiban/status/2051605154445549697"],"lat":33.271461,"lng":35.467951,"color":"#9c27b0"}]
+/*END_BASE*/;
+const BASE_COUNT = BASE_INCIDENTS.length;
+
+// Category colors (from KML)
+const CATEGORY_COLORS = {};
+BASE_INCIDENTS.forEach(d => { if (!CATEGORY_COLORS[d.category]) CATEGORY_COLORS[d.category] = d.color; });
+const DEFAULT_NEW_COLOR = '#5a9a6e';  // green for user-added without a recognized category
+
+// ----- State -----
+let userIncidents = [];   // loaded from shared storage
+let snapshotMode = null;  // null = live map; otherwise { id, name, incidents }
+let activeId = null;
+let activeCats = new Set();
+let pickMode = false;     // when true, next map click sets f-lat/f-lng
+
+// ----- Storage helpers -----
+const SHARED = true;
+async function storageGet(key) {
+  try {
+    const r = await window.storage.get(key, SHARED);
+    return r ? r.value : null;
+  } catch (e) { return null; }
+}
+async function storageSet(key, value) {
+  try {
+    const r = await window.storage.set(key, value, SHARED);
+    return !!r;
+  } catch (e) { console.error('storage set failed', key, e); return false; }
+}
+async function storageList(prefix) {
+  try {
+    const r = await window.storage.list(prefix, SHARED);
+    return r ? (r.keys || []) : [];
+  } catch (e) { return []; }
+}
+async function storageDelete(key) {
+  try { await window.storage.delete(key, SHARED); return true; } catch (e) { return false; }
+}
+
+// ----- Compose incidents view -----
+function currentIncidents() {
+  if (snapshotMode) return snapshotMode.incidents;
+  // live: base + user-added; assign _id
+  const merged = [...BASE_INCIDENTS.map((d,i) => ({...d, _id: 'b'+i, _origin: 'base'})),
+                  ...userIncidents.map((d,i) => ({...d, _id: 'u'+i, _origin: 'user'}))];
+  // Sort: dated desc, then undated last
+  merged.sort((a, b) => {
+    if (a.date_iso && b.date_iso) return b.date_iso.localeCompare(a.date_iso);
+    if (a.date_iso) return -1;
+    if (b.date_iso) return 1;
+    return 0;
+  });
+  return merged;
+}
+
+// ----- Map setup -----
+const map = L.map('map', { zoomControl: true, attributionControl: true, preferCanvas: true });
+const DEFAULT_VIEW = [33.18, 35.31];
+const DEFAULT_ZOOM = 11;
+map.setView(DEFAULT_VIEW, DEFAULT_ZOOM);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  subdomains: 'abcd', maxZoom: 19,
+}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+  attribution: '', subdomains: 'abcd', maxZoom: 19, pane: 'overlayPane', opacity: 0.85,
+}).addTo(map);
+
+const markerLayer = L.layerGroup().addTo(map);
+const markers = new Map();
+
+function makeIcon(color, opts={}) {
+  const size = opts.active ? 16 : 12;
+  const cls = `marker-dot ${opts.active?'active':''} ${opts.userAdded?'user-added':''}`;
+  return L.divIcon({
+    className: '',
+    html: `<div class="${cls}" style="width:${size}px;height:${size}px;background:${color};"></div>`,
+    iconSize: [size, size], iconAnchor: [size/2, size/2],
+  });
+}
+
+function escapeHTML(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function popupHTML(d) {
+  const srcLinks = (d.sources || []).map(u =>
+    `<a href="${escapeHTML(u)}" target="_blank" rel="noopener noreferrer">${escapeHTML(u.replace(/^https?:\/\//,''))}</a>`
+  ).join('<br>');
+  const addedTag = d._origin === 'user'
+    ? `<div class="pop-added">User-added${d.author ? ' · '+escapeHTML(d.author) : ''}${d.added_at ? ' · '+escapeHTML(new Date(d.added_at).toISOString().slice(0,10)) : ''}</div>`
+    : '';
+  return `<div class="popup">
+    <div class="pop-cat" style="background:${d.color}22;color:${d.color};border:1px solid ${d.color}55">${escapeHTML(d.category)}</div>
+    <div class="pop-asset">${escapeHTML(d.asset)}</div>
+    <div class="pop-date">${escapeHTML(d.date_display || 'date unknown')}</div>
+    <div class="pop-coords">${Number(d.lat).toFixed(5)}, ${Number(d.lng).toFixed(5)}</div>
+    <div class="pop-src">${srcLinks || '<span style="color:var(--fg-3)">no source link</span>'}</div>
+    ${addedTag}
+  </div>`;
+}
+
+function renderMarkers(visible) {
+  markerLayer.clearLayers();
+  markers.clear();
+  visible.forEach(d => {
+    const m = L.marker([d.lat, d.lng], {
+      icon: makeIcon(d.color, { active: d._id === activeId, userAdded: d._origin === 'user' })
+    });
+    m.bindPopup(popupHTML(d), { maxWidth: 320, minWidth: 240 });
+    m.on('click', () => setActive(d._id));
+    m.addTo(markerLayer);
+    markers.set(d._id, m);
+  });
+}
+
+function setActive(id) {
+  activeId = id;
+  markers.forEach((m, mid) => {
+    const d = currentIncidents().find(x => x._id === mid);
+    if (d) m.setIcon(makeIcon(d.color, { active: mid === activeId, userAdded: d._origin === 'user' }));
+  });
+  document.querySelectorAll('.incident').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === activeId);
+  });
+  if (activeId !== null) {
+    const el = document.querySelector(`.incident[data-id="${activeId}"]`);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (markers.get(activeId)) markers.get(activeId).openPopup();
+  }
+}
+
+// ----- Categories + legend -----
+function rebuildCategoryMeta() {
+  const cats = new Map();
+  currentIncidents().forEach(d => {
+    if (!cats.has(d.category)) cats.set(d.category, { name: d.category, color: CATEGORY_COLORS[d.category] || d.color || DEFAULT_NEW_COLOR, count: 0 });
+    cats.get(d.category).count++;
+  });
+  return [...cats.values()].sort((a,b) => b.count - a.count);
+}
+
+function renderLegend() {
+  const cats = rebuildCategoryMeta();
+  // If activeCats is empty (first init) or stale, default to all on
+  if (activeCats.size === 0) cats.forEach(c => activeCats.add(c.name));
+  const ul = document.getElementById('legend');
+  ul.innerHTML = '';
+  cats.forEach(cat => {
+    const li = document.createElement('li');
+    li.dataset.cat = cat.name;
+    if (!activeCats.has(cat.name)) li.classList.add('off');
+    li.innerHTML = `
+      <span class="swatch" style="background:${cat.color}"></span>
+      <span class="name">${escapeHTML(cat.name)}</span>
+      <span class="count">${cat.count}</span>
+    `;
+    li.addEventListener('click', () => {
+      if (activeCats.has(cat.name)) activeCats.delete(cat.name); else activeCats.add(cat.name);
+      li.classList.toggle('off');
+      apply();
+    });
+    ul.appendChild(li);
+  });
+}
+
+// ----- List rendering -----
+function renderList(visible) {
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  visible.forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'incident';
+    if (d._id === activeId) div.classList.add('active');
+    if (d._origin === 'user') div.classList.add('user-added');
+    div.dataset.id = d._id;
+    div.innerHTML = `
+      <div class="row1">
+        <span class="dot" style="background:${d.color}"></span>
+        <span class="asset">${escapeHTML(d.asset)}</span>
+        <span class="date">${escapeHTML(d.date_display || '— undated')}</span>
+      </div>
+      <div class="row2">
+        <span class="cat">${escapeHTML(d.category)}</span>
+        <span class="sep">·</span>
+        <span>${Number(d.lat).toFixed(4)}, ${Number(d.lng).toFixed(4)}</span>
+      </div>
+    `;
+    div.addEventListener('click', () => {
+      map.setView([d.lat, d.lng], Math.max(map.getZoom(), 13), { animate: true });
+      setActive(d._id);
+    });
+    list.appendChild(div);
+  });
+  document.getElementById('list-count').textContent = visible.length;
+  document.getElementById('stat-visible').textContent = visible.length;
+}
+
+// ----- Filtering -----
+function apply() {
+  const all = currentIncidents();
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const dFrom = document.getElementById('date-from').value;
+  const dTo = document.getElementById('date-to').value;
+  const visible = all.filter(d => {
+    if (!activeCats.has(d.category)) return false;
+    if (q) {
+      const hay = (d.asset + ' ' + d.category + ' ' + (d.date_display||'') + ' ' + (d.sources||[]).join(' ')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (dFrom && d.date_iso && d.date_iso < dFrom) return false;
+    if (dTo && d.date_iso && d.date_iso > dTo) return false;
+    if ((dFrom || dTo) && !d.date_iso) return false;
+    return true;
+  });
+  renderMarkers(visible);
+  renderList(visible);
+  document.getElementById('stat-total').textContent = all.length;
+  refreshDateBounds(all);
+}
+
+function refreshDateBounds(all) {
+  const iso = all.filter(d => d.date_iso).map(d => d.date_iso).sort();
+  if (iso.length) {
+    document.getElementById('stat-range').textContent = `${fmt(iso[0])} — ${fmt(iso[iso.length-1])}`;
+    document.getElementById('date-from').min = iso[0];
+    document.getElementById('date-from').max = iso[iso.length-1];
+    document.getElementById('date-to').min = iso[0];
+    document.getElementById('date-to').max = iso[iso.length-1];
+  } else {
+    document.getElementById('stat-range').textContent = '—';
+  }
+}
+
+function fmt(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-').map(Number);
+  return `${['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m]} ${d}, ${y}`;
+}
+
+// ----- Filter wires -----
+document.getElementById('search').addEventListener('input', apply);
+document.getElementById('date-from').addEventListener('change', apply);
+document.getElementById('date-to').addEventListener('change', apply);
+document.getElementById('legend-all').addEventListener('click', () => {
+  rebuildCategoryMeta().forEach(c => activeCats.add(c.name));
+  renderLegend(); apply();
+});
+document.getElementById('legend-none').addEventListener('click', () => {
+  activeCats.clear(); renderLegend(); apply();
+});
+document.getElementById('reset-view').addEventListener('click', () => {
+  map.setView(DEFAULT_VIEW, DEFAULT_ZOOM, { animate: true });
+});
+
+// ----- Modals -----
+function openModal(id) { document.getElementById(id).classList.add('on'); }
+function closeModal(id) { document.getElementById(id).classList.remove('on'); }
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.addEventListener('click', () => closeModal(btn.dataset.close));
+});
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', (e) => { if (e.target === bg) bg.classList.remove('on'); });
+});
+
+// ----- Add incident -----
+function populateCategoryDropdown() {
+  const sel = document.getElementById('f-category');
+  sel.innerHTML = '';
+  const cats = Object.keys(CATEGORY_COLORS);
+  cats.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    sel.appendChild(opt);
+  });
+  const other = document.createElement('option');
+  other.value = '__other__'; other.textContent = 'Other (custom)';
+  sel.appendChild(other);
+}
+populateCategoryDropdown();
+
+document.getElementById('open-add').addEventListener('click', () => {
+  document.getElementById('add-err').textContent = '';
+  openModal('add-modal');
+});
+
+document.getElementById('f-pick').addEventListener('click', () => {
+  closeModal('add-modal');
+  enterPickMode();
+});
+
+function enterPickMode() {
+  pickMode = true;
+  document.getElementById('crosshair').classList.add('on');
+  document.getElementById('pick-banner').classList.add('on');
+}
+function exitPickMode() {
+  pickMode = false;
+  document.getElementById('crosshair').classList.remove('on');
+  document.getElementById('pick-banner').classList.remove('on');
+}
+document.getElementById('cancel-pick').addEventListener('click', () => {
+  exitPickMode();
+  openModal('add-modal');
+});
+
+map.on('click', (e) => {
+  if (!pickMode) return;
+  document.getElementById('f-lat').value = e.latlng.lat.toFixed(6);
+  document.getElementById('f-lng').value = e.latlng.lng.toFixed(6);
+  exitPickMode();
+  openModal('add-modal');
+});
+
+document.getElementById('f-submit').addEventListener('click', async () => {
+  const errEl = document.getElementById('add-err');
+  errEl.textContent = '';
+  const asset = document.getElementById('f-asset').value.trim();
+  const catSel = document.getElementById('f-category').value;
+  const lat = parseFloat(document.getElementById('f-lat').value);
+  const lng = parseFloat(document.getElementById('f-lng').value);
+  const dateRaw = document.getElementById('f-date').value;
+  const source = document.getElementById('f-source').value.trim();
+  const author = document.getElementById('f-author').value.trim();
+
+  if (!asset) { errEl.textContent = 'Asset / description is required.'; return; }
+  if (Number.isNaN(lat) || Number.isNaN(lng)) { errEl.textContent = 'Valid latitude and longitude are required.'; return; }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) { errEl.textContent = 'Coordinates out of valid range.'; return; }
+  if (source && !/^https?:\/\//i.test(source)) { errEl.textContent = 'Source must start with http:// or https://'; return; }
+
+  const category = catSel === '__other__' ? (asset || 'Other') : catSel;
+  const color = CATEGORY_COLORS[category] || DEFAULT_NEW_COLOR;
+
+  let date_display = null, date_iso = null;
+  if (dateRaw) {
+    const [y, m, d] = dateRaw.split('-').map(Number);
+    date_iso = dateRaw;
+    date_display = `${['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m]} ${d}, ${y}`;
+  }
+
+  const entry = {
+    asset, category, lat, lng,
+    date_display, date_iso, year_inferred: false,
+    sources: source ? [source] : [],
+    color, author: author || null,
+    added_at: Date.now()
+  };
+
+  const key = `user_incident:${entry.added_at}:${Math.random().toString(36).slice(2,8)}`;
+  const ok = await storageSet(key, JSON.stringify(entry));
+  if (!ok) { errEl.textContent = 'Save failed. Storage may be unavailable.'; return; }
+
+  // Clear form, reload user data
+  document.getElementById('f-asset').value = '';
+  document.getElementById('f-lat').value = '';
+  document.getElementById('f-lng').value = '';
+  document.getElementById('f-date').value = '';
+  document.getElementById('f-source').value = '';
+  // keep author for repeat submissions
+
+  closeModal('add-modal');
+  await loadUserIncidents();
+  renderLegend();
+  apply();
+  // Pan to new incident
+  map.setView([lat, lng], Math.max(map.getZoom(), 14), { animate: true });
+});
+
+async function loadUserIncidents() {
+  if (snapshotMode) return;
+  const keys = await storageList('user_incident:');
+  const items = [];
+  for (const k of keys) {
+    const r = await storageGet(k);
+    if (r) {
+      try { items.push(JSON.parse(r)); } catch (e) {}
+    }
+  }
+  items.sort((a, b) => (b.added_at || 0) - (a.added_at || 0));
+  userIncidents = items;
+}
+
+// ----- Publish (snapshot) -----
+document.getElementById('open-publish').addEventListener('click', () => {
+  if (snapshotMode) {
+    document.getElementById('pub-err').textContent = 'You are viewing a snapshot. Exit it before publishing a new one.';
+    openModal('publish-modal');
+    return;
+  }
+  const all = currentIncidents();
+  const base = all.filter(d => d._origin === 'base').length;
+  const user = all.filter(d => d._origin === 'user').length;
+  const iso = all.filter(d => d.date_iso).map(d => d.date_iso).sort();
+  const range = iso.length ? `${fmt(iso[0])} — ${fmt(iso[iso.length-1])}` : 'no dated incidents';
+  document.getElementById('pub-summary').innerHTML =
+    `${all.length} incidents (${base} base + ${user} added)<br>Date range: ${escapeHTML(range)}`;
+  document.getElementById('pub-err').textContent = '';
+  openModal('publish-modal');
+});
+
+document.getElementById('pub-submit').addEventListener('click', async () => {
+  const errEl = document.getElementById('pub-err');
+  errEl.textContent = '';
+  const title = document.getElementById('pub-title').value.trim();
+  const author = document.getElementById('pub-author').value.trim();
+  const notes = document.getElementById('pub-notes').value.trim();
+  if (!title) { errEl.textContent = 'Title required.'; return; }
+
+  // Generate short ID
+  const id = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+  const all = currentIncidents().map(d => {
+    const { _id, _origin, ...rest } = d;
+    return { ...rest, origin: _origin };
+  });
+  const snap = {
+    id, title, author: author || null, notes: notes || null,
+    created_at: Date.now(),
+    count: all.length,
+    incidents: all
+  };
+  const ok = await storageSet(`snapshot:${id}`, JSON.stringify(snap));
+  if (!ok) { errEl.textContent = 'Publish failed. Storage may be unavailable.'; return; }
+
+  errEl.style.color = 'var(--ok)';
+  errEl.textContent = `Published as ${id}`;
+  setTimeout(() => { errEl.style.color = ''; errEl.textContent = ''; closeModal('publish-modal'); openSnapshotsModal(); }, 1200);
+});
+
+document.getElementById('pub-download').addEventListener('click', () => {
+  // Build a standalone HTML file with current data baked in
+  const all = currentIncidents().map(d => {
+    const { _id, _origin, ...rest } = d;
+    return rest;
+  });
+  // Take the current document, replace embedded INCIDENTS array with a frozen one,
+  // and strip the publish/add/snapshot UI by setting a flag.
+  const dataStr = JSON.stringify(all);
+  const title = document.getElementById('pub-title').value.trim() || 'Lebanon drone strike incidents — snapshot';
+
+  // Pull the live document's HTML, swap data, mark as frozen
+  let html = document.documentElement.outerHTML;
+  // Replace the BASE_INCIDENTS array between sentinels
+  html = html.replace(/\/\*BEGIN_BASE\*\/[\s\S]*?\/\*END_BASE\*\//,
+                      `/*BEGIN_BASE*/${dataStr}/*END_BASE*/`);
+  // Inject frozen flag right after 'use strict'
+  html = html.replace("'use strict';", "'use strict';\nconst FROZEN_SNAPSHOT = true;\nconst FROZEN_TITLE = " + JSON.stringify(title) + ";");
+  // Wrap in <!DOCTYPE>
+  html = '<!DOCTYPE html>\n' + html;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = title.replace(/[^a-z0-9_\-]+/gi, '_').slice(0, 60) + '.html';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+});
+
+// ----- Snapshots list -----
+async function openSnapshotsModal() {
+  openModal('snapshots-modal');
+  const list = document.getElementById('snapshot-list');
+  list.innerHTML = '<div class="snapshot-empty">Loading…</div>';
+  const keys = await storageList('snapshot:');
+  if (!keys.length) {
+    list.innerHTML = '<div class="snapshot-empty">No snapshots published yet.</div>';
+    return;
+  }
+  const snaps = [];
+  for (const k of keys) {
+    const r = await storageGet(k);
+    if (r) { try { snaps.push(JSON.parse(r)); } catch (e) {} }
+  }
+  snaps.sort((a,b) => (b.created_at||0) - (a.created_at||0));
+  list.innerHTML = '';
+  snaps.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'snapshot-item';
+    const created = new Date(s.created_at).toISOString().replace('T',' ').slice(0,16) + ' UTC';
+    item.innerHTML = `
+      <div class="meta">
+        <div class="title">${escapeHTML(s.title)}</div>
+        <div class="sub">
+          <span class="id">${escapeHTML(s.id)}</span>
+          · ${s.count} incidents
+          · ${escapeHTML(created)}
+          ${s.author ? '· '+escapeHTML(s.author) : ''}
+        </div>
+      </div>
+      <div class="actions">
+        <button data-act="open" data-id="${escapeHTML(s.id)}">Open</button>
+        <button data-act="copy" data-id="${escapeHTML(s.id)}">Copy ID</button>
+        <button data-act="del" data-id="${escapeHTML(s.id)}">Delete</button>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+  list.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => snapshotAction(b.dataset.act, b.dataset.id));
+  });
+}
+document.getElementById('open-snapshots').addEventListener('click', openSnapshotsModal);
+
+async function snapshotAction(act, id) {
+  const msgEl = document.getElementById('snap-msg');
+  msgEl.style.color = ''; msgEl.textContent = '';
+  if (act === 'open') {
+    const r = await storageGet(`snapshot:${id}`);
+    if (!r) { msgEl.textContent = 'Snapshot not found.'; return; }
+    const snap = JSON.parse(r);
+    // Mark all as base for display purposes inside the snapshot
+    snapshotMode = {
+      id: snap.id,
+      name: snap.title,
+      incidents: snap.incidents.map((d, i) => ({ ...d, _id: 's'+i, _origin: d.origin || 'base' }))
+    };
+    activeCats = new Set();  // reset so renderLegend defaults to all-on
+    activeId = null;
+    document.getElementById('viewing-banner').classList.add('on');
+    document.getElementById('viewing-name').textContent = snap.title;
+    document.getElementById('viewing-id').textContent = snap.id;
+    closeModal('snapshots-modal');
+    renderLegend(); apply();
+    map.setView(DEFAULT_VIEW, DEFAULT_ZOOM, { animate: true });
+  } else if (act === 'copy') {
+    try {
+      await navigator.clipboard.writeText(id);
+      msgEl.style.color = 'var(--ok)';
+      msgEl.textContent = `Copied: ${id}`;
+    } catch (e) {
+      msgEl.textContent = 'Copy failed; ID is: ' + id;
+    }
+  } else if (act === 'del') {
+    if (!confirm(`Delete snapshot "${id}"? This affects everyone using this artifact.`)) return;
+    await storageDelete(`snapshot:${id}`);
+    msgEl.style.color = 'var(--ok)';
+    msgEl.textContent = 'Deleted.';
+    openSnapshotsModal();  // refresh
+  }
+}
+
+document.getElementById('exit-snapshot').addEventListener('click', () => {
+  snapshotMode = null;
+  document.getElementById('viewing-banner').classList.remove('on');
+  activeCats = new Set();
+  activeId = null;
+  renderLegend(); apply();
+});
+
+// ----- Export (respects current view) -----
+function visibleNow() {
+  const all = currentIncidents();
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const dFrom = document.getElementById('date-from').value;
+  const dTo = document.getElementById('date-to').value;
+  return all.filter(d => {
+    if (!activeCats.has(d.category)) return false;
+    if (q) {
+      const hay = (d.asset + ' ' + d.category + ' ' + (d.date_display||'') + ' ' + (d.sources||[]).join(' ')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (dFrom && d.date_iso && d.date_iso < dFrom) return false;
+    if (dTo && d.date_iso && d.date_iso > dTo) return false;
+    if ((dFrom || dTo) && !d.date_iso) return false;
+    return true;
+  });
+}
+function download(filename, text, mime) {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+document.getElementById('export-csv').addEventListener('click', () => {
+  const v = visibleNow();
+  const esc = s => `"${String(s ?? '').replace(/"/g, '""')}"`;
+  const rows = [['origin','category','asset','date_display','date_iso','year_inferred','lat','lng','sources','author','added_at']];
+  v.forEach(d => rows.push([
+    d._origin || 'base', d.category, d.asset, d.date_display || '', d.date_iso || '',
+    d.year_inferred ? 'true' : 'false',
+    d.lat, d.lng, (d.sources||[]).join(' | '),
+    d.author || '', d.added_at ? new Date(d.added_at).toISOString() : ''
+  ]));
+  const csv = rows.map(r => r.map(esc).join(',')).join('\n');
+  download('lebanon_drone_strike_incidents.csv', csv, 'text/csv;charset=utf-8');
+});
+document.getElementById('export-geojson').addEventListener('click', () => {
+  const v = visibleNow();
+  const geo = {
+    type: 'FeatureCollection',
+    features: v.map(d => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [d.lng, d.lat] },
+      properties: {
+        origin: d._origin || 'base',
+        category: d.category, asset: d.asset,
+        date_display: d.date_display, date_iso: d.date_iso,
+        year_inferred: d.year_inferred,
+        sources: d.sources || [], color: d.color,
+        author: d.author || null,
+        added_at: d.added_at ? new Date(d.added_at).toISOString() : null
+      }
+    }))
+  };
+  download('lebanon_drone_strike_incidents.geojson', JSON.stringify(geo, null, 2), 'application/geo+json');
+});
+
+// ----- Boot -----
+async function boot() {
+  // If frozen snapshot mode (downloaded file), strip publish/add UI
+  if (typeof FROZEN_SNAPSHOT !== 'undefined' && FROZEN_SNAPSHOT) {
+    document.getElementById('open-add').style.display = 'none';
+    document.getElementById('open-publish').style.display = 'none';
+    document.getElementById('open-snapshots').style.display = 'none';
+    if (typeof FROZEN_TITLE !== 'undefined') {
+      document.querySelector('header.bar h1').innerHTML = escapeHTML(FROZEN_TITLE) + ' <em>— published snapshot</em>';
+    }
+    document.querySelector('header.bar .crest').textContent = 'OSINT · FROZEN';
+  } else {
+    await loadUserIncidents();
+  }
+  renderLegend();
+  apply();
+}
+boot();
+</script>
+</body>
+</html>
