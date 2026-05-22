@@ -302,6 +302,56 @@
   }
   .pick-banner button:hover { background: rgba(0,0,0,0.3); }
 
+  .basemap-switch {
+    position: absolute; top: 12px; right: 12px; z-index: 1000;
+    font-family: var(--mono);
+  }
+  .basemap-trigger {
+    background: rgba(15,16,18,0.92);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    padding: 7px 11px 7px 9px;
+    font-size: 10.5px; letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer; border-radius: 2px;
+    display: flex; align-items: center; gap: 7px;
+    user-select: none;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .basemap-trigger:hover { border-color: var(--accent); color: var(--accent); }
+  .basemap-trigger svg { color: var(--fg-2); flex-shrink: 0; }
+  .basemap-trigger:hover svg { color: var(--accent); }
+  .basemap-menu {
+    margin-top: 4px;
+    background: rgba(15,16,18,0.95);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    min-width: 160px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    display: none;
+  }
+  .basemap-switch.open .basemap-menu { display: block; }
+  .basemap-opt {
+    padding: 8px 12px;
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--fg-2);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .basemap-opt:last-child { border-bottom: none; }
+  .basemap-opt:hover { background: var(--bg-3); color: var(--fg); }
+  .basemap-opt.on { color: var(--accent); }
+  .basemap-opt .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--border-2);
+    flex-shrink: 0;
+  }
+  .basemap-opt.on .dot { background: var(--accent); box-shadow: 0 0 0 2px rgba(212,160,74,0.25); }
+
   .footer-strip {
     position: absolute; bottom: 12px; left: 12px; z-index: 1000;
     background: rgba(15,16,18,0.92);
@@ -561,6 +611,17 @@
 
   <main>
     <div id="map"></div>
+    <div class="basemap-switch" id="basemap-switch">
+      <div class="basemap-trigger" id="basemap-trigger" title="Switch basemap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"></polygon>
+          <line x1="9" y1="3" x2="9" y2="18"></line>
+          <line x1="15" y1="6" x2="15" y2="21"></line>
+        </svg>
+        <span id="basemap-current">Dark</span>
+      </div>
+      <div class="basemap-menu" id="basemap-menu"></div>
+    </div>
     <div class="map-crosshair" id="crosshair"></div>
     <div class="pick-banner" id="pick-banner">
       <span>Click map to set coordinates</span>
@@ -754,13 +815,90 @@ const DEFAULT_VIEW = [33.18, 35.31];
 const DEFAULT_ZOOM = 11;
 map.setView(DEFAULT_VIEW, DEFAULT_ZOOM);
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-  subdomains: 'abcd', maxZoom: 19,
-}).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-  attribution: '', subdomains: 'abcd', maxZoom: 19, pane: 'overlayPane', opacity: 0.85,
-}).addTo(map);
+// Basemap registry. Each entry: { name, base: TileLayer, labels?: TileLayer, theme: 'dark'|'light' }
+const BASEMAPS = {
+  'dark': {
+    label: 'Dark',
+    theme: 'dark',
+    base: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd', maxZoom: 19,
+    }),
+    labels: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+      attribution: '', subdomains: 'abcd', maxZoom: 19, opacity: 0.85,
+    }),
+  },
+  'light': {
+    label: 'Light',
+    theme: 'light',
+    base: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd', maxZoom: 19,
+    }),
+    labels: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+      attribution: '', subdomains: 'abcd', maxZoom: 19, opacity: 0.9,
+    }),
+  },
+  'satellite': {
+    label: 'Satellite',
+    theme: 'dark',  // imagery is dark-ish; keep dark UI overlay
+    base: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+      maxZoom: 19,
+    }),
+    labels: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+      attribution: '', subdomains: 'abcd', maxZoom: 19, opacity: 0.92,
+    }),
+  },
+  'topo': {
+    label: 'Topographic',
+    theme: 'light',
+    base: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> — Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community',
+      maxZoom: 19,
+    }),
+    labels: null,  // topo already has labels baked in
+  },
+  'osm': {
+    label: 'OpenStreetMap',
+    theme: 'light',
+    base: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }),
+    labels: null,  // OSM has labels baked in
+  },
+};
+
+let currentBasemap = 'dark';
+function activateBasemap(key) {
+  // Remove old
+  const old = BASEMAPS[currentBasemap];
+  if (old) {
+    map.removeLayer(old.base);
+    if (old.labels) map.removeLayer(old.labels);
+  }
+  const next = BASEMAPS[key];
+  if (!next) return;
+  next.base.addTo(map);
+  if (next.labels) next.labels.addTo(map);
+  currentBasemap = key;
+  // Reflect in document for any theme-dependent CSS (we keep UI dark always; only attribution differs)
+  document.body.dataset.basemap = key;
+  // Persist preference (per-user, not shared)
+  try { localStorage.setItem('basemap', key); } catch (e) {}
+  // Update UI control
+  document.querySelectorAll('.basemap-opt').forEach(el => {
+    el.classList.toggle('on', el.dataset.key === key);
+  });
+}
+
+// Restore persisted basemap (silently fall back if storage unavailable)
+try {
+  const saved = localStorage.getItem('basemap');
+  if (saved && BASEMAPS[saved]) currentBasemap = saved;
+} catch (e) {}
+activateBasemap(currentBasemap);
 
 const markerLayer = L.layerGroup().addTo(map);
 const markers = new Map();
@@ -1301,6 +1439,36 @@ document.getElementById('export-geojson').addEventListener('click', () => {
     }))
   };
   download('lebanon_drone_strike_incidents.geojson', JSON.stringify(geo, null, 2), 'application/geo+json');
+});
+
+// ----- Basemap switcher UI -----
+function buildBasemapMenu() {
+  const menu = document.getElementById('basemap-menu');
+  menu.innerHTML = '';
+  Object.entries(BASEMAPS).forEach(([key, b]) => {
+    const opt = document.createElement('div');
+    opt.className = 'basemap-opt' + (key === currentBasemap ? ' on' : '');
+    opt.dataset.key = key;
+    opt.innerHTML = `<span class="dot"></span><span>${escapeHTML(b.label)}</span>`;
+    opt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      activateBasemap(key);
+      document.getElementById('basemap-current').textContent = BASEMAPS[key].label;
+      document.getElementById('basemap-switch').classList.remove('open');
+    });
+    menu.appendChild(opt);
+  });
+}
+buildBasemapMenu();
+document.getElementById('basemap-current').textContent = BASEMAPS[currentBasemap].label;
+
+document.getElementById('basemap-trigger').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('basemap-switch').classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  const sw = document.getElementById('basemap-switch');
+  if (!sw.contains(e.target)) sw.classList.remove('open');
 });
 
 // ----- Boot -----
