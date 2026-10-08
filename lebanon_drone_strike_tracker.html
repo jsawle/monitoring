@@ -630,6 +630,7 @@
     <div class="footer-strip">
       <div><b>Data:</b> 62 base placemarks from public Google My Maps export, plus shared user-added incidents. Source media linked per incident.</div>
       <div style="margin-top:4px;"><b>Note:</b> Original placemark dates lack year. Inferred as 2026 from context; treat as provisional.</div>
+      <div style="margin-top:4px;"><b>Version:</b> 1.1 · Basemaps: Esri and OpenStreetMap</div>
       <div class="actions">
         <button id="export-csv">Export CSV</button>
         <button id="export-geojson">Export GeoJSON</button>
@@ -816,47 +817,35 @@ const DEFAULT_ZOOM = 11;
 map.setView(DEFAULT_VIEW, DEFAULT_ZOOM);
 
 // Basemap registry. Each entry: { name, base: TileLayer, labels?: TileLayer, theme: 'dark'|'light' }
+// All basemaps are Esri or OpenStreetMap. Credits are each service's own copyrightText.
+const ESRI = 'https://services.arcgisonline.com/arcgis/rest/services/';
+const POWERED = 'Powered by <a href="https://www.esri.com/">Esri</a> | ';
+const CANVAS_CREDIT = 'Esri, HERE, Garmin, (c) <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community';
+// Esri Canvas tiles are cached to level 16; Leaflet enlarges them beyond that.
+const esriTiles = (service, opts) => L.tileLayer(ESRI + service + '/MapServer/tile/{z}/{y}/{x}', Object.assign({ maxZoom: 19 }, opts));
 const BASEMAPS = {
   'dark': {
     label: 'Dark',
     theme: 'dark',
-    base: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd', maxZoom: 19,
-    }),
-    labels: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-      attribution: '', subdomains: 'abcd', maxZoom: 19, opacity: 0.85,
-    }),
+    base: esriTiles('Canvas/World_Dark_Gray_Base', { attribution: POWERED + CANVAS_CREDIT, maxNativeZoom: 16 }),
+    labels: esriTiles('Canvas/World_Dark_Gray_Reference', { attribution: '', maxNativeZoom: 16 }),
   },
   'light': {
     label: 'Light',
     theme: 'light',
-    base: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd', maxZoom: 19,
-    }),
-    labels: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
-      attribution: '', subdomains: 'abcd', maxZoom: 19, opacity: 0.9,
-    }),
+    base: esriTiles('Canvas/World_Light_Gray_Base', { attribution: POWERED + CANVAS_CREDIT, maxNativeZoom: 16 }),
+    labels: esriTiles('Canvas/World_Light_Gray_Reference', { attribution: '', maxNativeZoom: 16 }),
   },
   'satellite': {
     label: 'Satellite',
     theme: 'dark',  // imagery is dark-ish; keep dark UI overlay
-    base: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
-      maxZoom: 19,
-    }),
-    labels: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
-      attribution: '', subdomains: 'abcd', maxZoom: 19, opacity: 0.92,
-    }),
+    base: esriTiles('World_Imagery', { attribution: POWERED + 'Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community' }),
+    labels: esriTiles('Reference/World_Boundaries_and_Places', { attribution: 'Labels: ' + CANVAS_CREDIT }),
   },
   'topo': {
     label: 'Topographic',
     theme: 'light',
-    base: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> — Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community',
-      maxZoom: 19,
-    }),
+    base: esriTiles('World_Topo_Map', { attribution: POWERED + 'Sources: Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), (c) <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS User Community' }),
     labels: null,  // topo already has labels baked in
   },
   'osm': {
